@@ -52,8 +52,20 @@ pub trait GenericNode: fmt::Debug + Clone + PartialEq + Eq + Hash + 'static {
     /// Create a new element node from a tag string.
     fn element_from_tag(tag: &str) -> Self;
 
+    /// Tells if a node is an instance of the given element.
+    fn is_element<T: SycamoreElement>(&self) -> bool;
+
     /// Create a new text node.
     fn text_node(text: &str) -> Self;
+
+    /// Tells if a node is a text node.
+    fn is_text_node(&self) -> bool;
+
+    /// Reads contents of a text node.
+    fn get_text_node_contents(&self) -> String;
+
+    /// Sets the contents of a text node.
+    fn set_text_node_contents(&self, value: &str);
 
     /// Create a new text node from an integer.
     fn text_node_int(int: i32) -> Self {
@@ -72,17 +84,29 @@ pub trait GenericNode: fmt::Debug + Clone + PartialEq + Eq + Hash + 'static {
     /// [`GenericNode::marker`] instead.
     fn marker_with_text(text: &str) -> Self;
 
+    /// Gets an attribute on a node.
+    fn get_attribute(&self, name: &str) -> Option<String>;
+
     /// Sets an attribute on a node.
     fn set_attribute(&self, name: &str, value: &str);
 
     /// Removes an attribute on a node.
     fn remove_attribute(&self, name: &str);
 
+    /// Gets the `class` attribute on a node.
+    /// This should have the same outcome as calling `get_attribute("class")`.
+    /// This may have some performance increase for `DomNode`.
+    fn get_class_name(&self) -> String {
+       self.get_attribute("class").unwrap_or_else(|| "".to_string())
+    }
+
     /// Sets the `class` attribute on a node.
     /// This should have the same outcome as calling `set_attribute("class", value)`.
     /// For `DomNode`, this sets the `className` property directly which is about 2x faster (on
     /// Chrome).
-    fn set_class_name(&self, value: &str);
+    fn set_class_name(&self, value: &str) {
+       self.set_attribute("class", value)
+    }
 
     /// Add a class to the element.
     /// If multiple classes are specified, delimited by spaces, all the classes should be added.

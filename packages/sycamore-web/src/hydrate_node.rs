@@ -10,7 +10,7 @@ use sycamore_core::view::View;
 use sycamore_reactive::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::Node;
+use web_sys::{Node,Text,Element};
 
 use crate::dom_node::{DomNode, NodeId};
 use crate::hydrate::get_next_element;
@@ -144,6 +144,20 @@ impl GenericNode for HydrateNode {
         }
     }
 
+    fn is_element<T: SycamoreElement>(&self) -> bool {
+        if let Some(elem) = self.node.to_web_sys().dyn_ref::<Element>() {
+            let tag = elem.local_name();
+            let ns = elem.namespace_uri();
+            if let Some(ns) = ns {
+                Some(ns.as_str()) == T::NAMESPACE && tag.eq_ignore_ascii_case(T::TAG_NAME)
+            } else {
+                None == T::NAMESPACE && tag.eq_ignore_ascii_case(T::TAG_NAME)
+            }
+        } else {
+            false
+        }
+    }
+
     /// When hydrating, instead of creating a new node, this will attempt to hydrate an existing
     /// node.
     fn text_node(text: &str) -> Self {
@@ -151,6 +165,21 @@ impl GenericNode for HydrateNode {
         Self {
             node: DomNode::text_node(text),
         }
+    }
+
+    #[inline]
+    fn is_text_node(&self) -> bool {
+        self.node.to_web_sys().has_type::<Text>()
+    }
+
+    #[inline]
+    fn get_text_node_contents(&self) -> String {
+        self.node.to_web_sys().unchecked_ref::<Text>().data()
+    }
+
+    #[inline]
+    fn set_text_node_contents(&self, value: &str) {
+        self.node.to_web_sys().unchecked_ref::<Text>().set_data(value)
     }
 
     fn marker() -> Self {
@@ -165,6 +194,14 @@ impl GenericNode for HydrateNode {
         Self {
             node: DomNode::marker_with_text(text),
         }
+    }
+
+    #[inline]
+    fn get_attribute(&self, name: &str) -> Option<String> {
+        self.node
+            .to_web_sys()
+            .unchecked_ref::<Element>()
+            .get_attribute(name)
     }
 
     #[inline]

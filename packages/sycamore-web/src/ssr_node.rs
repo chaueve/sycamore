@@ -124,6 +124,8 @@ impl GenericNode for SsrNode {
 
     const USE_HYDRATION_CONTEXT: bool = true;
 
+    /// This method incorrectly does not specify the namespace of the element.
+    /// There is no trivial fix.
     fn element<T: SycamoreElement>() -> Self {
         let hk = get_next_id();
         let mut attributes = IndexMap::new();
@@ -150,8 +152,42 @@ impl GenericNode for SsrNode {
         })))
     }
 
+    /// This method incorrectly does not check the namespace of the element.
+    /// There is no trivial fix.
+    fn is_element<T: SycamoreElement>(&self) -> bool {
+        if let SsrNodeType::Element(cell) = &*self.0.ty {
+            cell.borrow().name.as_ref().eq_ignore_ascii_case(T::TAG_NAME)
+        } else {
+            false
+        }
+    }
+
     fn text_node(text: &str) -> Self {
         Self::new(SsrNodeType::Text(RefCell::new(Text(text.to_string()))))
+    }
+
+    fn is_text_node(&self) -> bool {
+        match &*self.0.ty {
+            SsrNodeType::Text(_) => true,
+            SsrNodeType::RawText(_) => true,
+            _ => false,
+        }
+    }
+
+    fn get_text_node_contents(&self) -> String {
+        match &*self.0.ty {
+            SsrNodeType::Text(txt) => txt.borrow().0.clone(),
+            SsrNodeType::RawText(_) => unimplemented!(),
+            _ => panic!("Called SsrNode::get_text_node_contents() on non text node!"),
+        }
+    }
+
+    fn set_text_node_contents(&self, value: &str) {
+        match &*self.0.ty {
+            SsrNodeType::Text(txt) => txt.borrow_mut().0 = value.to_string(),
+            SsrNodeType::RawText(_) => unimplemented!(),
+            _ => panic!("Called SsrNode::set_text_node_contents() on non text node!"),
+        }
     }
 
     fn marker_with_text(text: &str) -> Self {
@@ -159,6 +195,15 @@ impl GenericNode for SsrNode {
             text.to_string(),
         ))))
     }
+
+    fn get_attribute(&self, name: &str) -> Option<String> {
+        self.unwrap_element()
+            .borrow()
+            .attributes
+            .get(name)
+            .map(|x| x.clone())
+    }
+
 
     fn set_attribute(&self, name: &str, value: &str) {
         self.unwrap_element()

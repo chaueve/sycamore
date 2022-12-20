@@ -175,12 +175,41 @@ impl GenericNode for DomNode {
         }
     }
 
+    fn is_element<T: SycamoreElement>(&self) -> bool {
+        if let Some(elem) = self.node.dyn_ref::<Element>() {
+            let tag = elem.local_name();
+            let ns = elem.namespace_uri();
+            if let Some(ns) = ns {
+                Some(ns.as_str()) == T::NAMESPACE && tag.eq_ignore_ascii_case(T::TAG_NAME)
+            } else {
+                None == T::NAMESPACE && tag.eq_ignore_ascii_case(T::TAG_NAME)
+            }
+        } else {
+            false
+        }
+    }
+
     fn text_node(text: &str) -> Self {
         let node = document().create_text_node(text).into();
         DomNode {
             id: Default::default(),
             node,
         }
+    }
+
+    #[inline]
+    fn is_text_node(&self) -> bool {
+        self.node.has_type::<Text>()
+    }
+
+    #[inline]
+    fn get_text_node_contents(&self) -> String {
+        self.node.unchecked_ref::<Text>().data()
+    }
+
+    #[inline]
+    fn set_text_node_contents(&self, value: &str) {
+        self.node.unchecked_ref::<Text>().set_data(value)
     }
 
     fn text_node_int(int: i32) -> Self {
@@ -200,6 +229,12 @@ impl GenericNode for DomNode {
             id: Default::default(),
             node,
         }
+    }
+
+    fn get_attribute(&self, name: &str) -> Option<String> {
+        self.node
+            .unchecked_ref::<Element>()
+            .get_attribute(intern(name))
     }
 
     fn set_attribute(&self, name: &str, value: &str) {
